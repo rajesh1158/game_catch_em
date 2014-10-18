@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			#gameCanvas {
+				border: 1px solid black;
+				margin-left: 7%;
+			}
+
+			#gameOverCanvas{
+				left:7%;
+				position: absolute;
+			}
+		</style>
+		<script src="js/jquery.js"></script>
+
+		<script type="text/javascript">
+			var caught, dropped, keysArr, allVegArr;
+			var isGamePlaying = false;
+			var snd = new Audio('audio/ding.wav');
+			var vegArr = new Array();
+
+			var bananaImg = new Image();
+			bananaImg.src = 'images/banana.png';
+			vegArr.push(bananaImg);
+			var brocolliImg = new Image();
+			brocolliImg.src = 'images/brocolli.png';
+			vegArr.push(brocolliImg);
+			var capsicumImg = new Image();
+			capsicumImg.src = 'images/capsicum.png';
+			vegArr.push(capsicumImg);
+			var carrotImg = new Image();
+			carrotImg.src = 'images/carrot.png';
+			vegArr.push(carrotImg);
+			var cherryImg = new Image();
+			cherryImg.src = 'images/cherry.png';
+			vegArr.push(cherryImg);
+			var lemonImg = new Image();
+			lemonImg.src = 'images/lemon.png';
+			vegArr.push(lemonImg);
+			var tomatoImg = new Image();
+			tomatoImg.src = 'images/tomato.png';
+			vegArr.push(tomatoImg);
+
+			var basketImage = new Image();
+			basketImage.src = 'images/basket.png';
+			var bgImage = new Image();
+			bgImage.src = 'images/kitchen.png';
+			var logoImg = new Image();
+			logoImg.src = 'images/logo.png';
+			var playImg = new Image();
+			playImg.src = 'images/playButton.png';
+
+			$(document).ready(function() {
+				$(window).keydown(function(evt) {
+					if(evt.keyCode == 39 || evt.keyCode == 37) {
+						keysArr[evt.keyCode] = true;
+					} else if(!isGamePlaying && evt.keyCode == 13) {
+						startGame();
+						$("#gameCanvas").css('opacity','');
+					}
+				});
+
+				$(window).keyup(function(evt) {
+					if(evt.keyCode == 39 || evt.keyCode == 37) {
+						keysArr[evt.keyCode] = false;
+					}
+				});
+			});
+
+			function initDefaults() {
+				caught = 0;
+				dropped = 50;
+				keysArr = new Array();
+				allVegArr = new Array();
+			}
+
+			function Vegetable(x, y, xPos, yPos, w, h, fallSpeed, image) {
+				this.x = x;
+				this.y = y;
+				this.w = w;
+				this.h = h;
+				this.xPos = xPos;
+				this.yPos = yPos;
+				this.fallSpeed = fallSpeed;
+				this.image = image;
+			}
+
+			function Basket(x,image) {
+				this.xPos = x;
+				this.w = 125;
+				this.h = 75;
+				this.yPos = 575;
+				this.moveXDist = 10;
+				this.image = image;
+			}
+
+			window.onload = function() {
+				init();
+			};
+
+			function init(){
+				canvas = document.getElementById("gameCanvas");
+				gameOverCanvas = document.getElementById("gameOverCanvas");
+				context = canvas.getContext("2d");
+				gameOverContext = gameOverCanvas.getContext("2d");
+
+				//background
+				context.drawImage(bgImage,0,0, bgImage.width, bgImage.height, 0,0,canvas.width, canvas.height);
+
+				//basket
+				basket = new Basket(300,basketImage);
+				context.drawImage(basket.image, basket.xPos, basket.yPos, basket.w, basket.h);
+
+				//logo
+				context.drawImage(logoImg, canvas.width/4, canvas.height/3-50, 400, 125);
+
+				//play button
+				context.drawImage(playImg, canvas.width/4 + 50, canvas.height/2-50, 275, 70);
+			}
+
+			function startGame() {
+				initDefaults();
+				isGamePlaying = true;
+				gameTimer = setInterval(drawScene, 20);
+				ballsTimer = setInterval(spawnVegetables, 1000);
+			}
+
+			function getRandFallSpeed() {
+				return (Math.ceil( (Math.random() * 4) + 2));
+			}
+
+			function getRandVegXPos() {
+				return Math.floor(Math.random() * (4*canvas.width/5));
+			}
+
+			function spawnVegetables() {
+				var key = Math.floor(Math.random() * vegArr.length);
+				var vegImg = vegArr[key];
+				var newVegetable = new Vegetable(0, 0, getRandVegXPos(), 0, vegImg.width, vegImg.height, getRandFallSpeed(), vegImg);
+				allVegArr.push(newVegetable);
+			}
+
+			function processKeys() {
+				if(keysArr[39]) {//right arrow
+					var currentX = basket.xPos + basket.moveXDist;
+					if(currentX >= canvas.width-basket.w) {
+						basket.xPos = canvas.width-basket.w;
+					} else {
+						basket.xPos = currentX;
+					}
+				} else if(keysArr[37]) {//left arrow
+					var currentX = basket.xPos - basket.moveXDist;
+					if(currentX <= 0) {
+						basket.xPos = 0;
+					} else {
+						basket.xPos = currentX;
+					}
+				}
+			}
+
+			function clearContexts() {
+				context.clearRect(0,0,canvas.width,canvas.height);
+				gameOverContext.clearRect(0,0,gameOverCanvas.width,gameOverCanvas.height);
+			}
+
+			function drawScene() {
+				clearContexts();
+				processKeys();
+
+				//background
+				context.drawImage(bgImage,0,0, bgImage.width, bgImage.height, 0,0,canvas.width, canvas.height);
+
+				//basket
+				context.drawImage(basket.image, basket.xPos, basket.yPos, basket.w, basket.h);
+
+				//draw balls
+				for(i=0;i<allVegArr.length;i++) {
+					if(allVegArr[i] != undefined) {
+						var veg = allVegArr[i];
+						veg.yPos += veg.fallSpeed;
+						context.drawImage(veg.image, veg.x, veg.y, veg.image.width, veg.image.height, veg.xPos, veg.yPos, veg.w, veg.h);
+
+						if(veg.yPos >= basket.yPos && veg.yPos < basket.yPos + basket.h/5 && veg.xPos + veg.w/2 >= basket.xPos && veg.xPos + veg.w/2 <= basket.xPos + basket.w) {//caught
+							delete allVegArr[i];
+							snd.play();
+							caught++;
+						} else if(veg.yPos > canvas.height) {//didnt catch
+							dropped--;
+							delete allVegArr[i];
+						}
+					}
+				}
+
+				context.font = "bold 16px sans-serif";
+				context.fillStyle = "rgb(255,255,255)";
+				context.fillText("can drop: " + dropped, canvas.width - 325, 30);
+				context.fillText("caught: " + caught, canvas.width - 175, 30);
+
+				if(dropped == 0) {
+					isGamePlaying = false;
+					clearInterval(gameTimer);
+					clearInterval(ballsTimer);
+					$("#gameCanvas").css('opacity','0.5');
+					gameOverContext.font = "bold 30px sans-serif";
+					gameOverContext.fillStyle = "black";
+					gameOverContext.fillText("Congratulations !!!", canvas.width/2-160,canvas.height/3);
+					gameOverContext.font = "bold 25px sans-serif";
+					gameOverContext.fillStyle = "rgb(0, 0, 0)";				
+					gameOverContext.fillText("You saved " + caught + " vegetables !!", canvas.width/2-160,canvas.height/3+50);
+					gameOverContext.font = "bold 20px sans-serif";
+					gameOverContext.fillText("Press ENTER to play again", canvas.width/2-160,canvas.height/3+100);
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<canvas id="gameCanvas" width="800" height="650"></canvas>
+		<canvas id="gameOverCanvas" width="800" height="650"></canvas>
+	</body>
+</html>
